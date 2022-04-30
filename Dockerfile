@@ -7,6 +7,6 @@ RUN yarn install && yarn cache clean
 
 COPY ./tsconfig.json ./
 COPY ./src ./src
-RUN yarn tsc
+RUN yarn build
 
-CMD node ./build/index.js
+CMD yarn start
