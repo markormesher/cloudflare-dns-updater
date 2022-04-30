@@ -56,33 +56,42 @@ async function updateDomains() {
   const currentIp = (await axios.get("https://ipecho.net/plain")).data;
   log(`Current IP is ${currentIp}`);
   for (const zone of zones) {
-    const { zoneId, token, ttlSeconds, domains, autoWww } = zone;
+    const { zoneId, token, ttlSeconds, domains, autoWww, autoDelete } = zone;
     const dnsEntires = await getDnsEntries(zoneId, token);
 
     // create missing domains
     for (const domain of domains) {
       if (!dnsEntires.some((e) => e.name === domain)) {
-        await updateDnsEntry(zoneId, token, { id: null, name: domain, content: currentIp, ttl: ttlSeconds });
+        await updateDnsEntry(zoneId, token, { id: null, name: domain, content: currentIp, ttl: ttlSeconds || 120 });
       }
       if (autoWww && !dnsEntires.some((e) => e.name === "www." + domain)) {
-        await updateDnsEntry(zoneId, token, { id: null, name: "www." + domain, content: currentIp, ttl: ttlSeconds });
+        await updateDnsEntry(zoneId, token, {
+          id: null,
+          name: "www." + domain,
+          content: currentIp,
+          ttl: ttlSeconds || 120,
+        });
       }
     }
 
     for (const entry of dnsEntires) {
       // remove undeclared domains
       if ((!autoWww || !entry.name.startsWith("www.")) && !domains.includes(entry.name)) {
-        await removeDnsEntry(zoneId, token, entry);
+        if (autoDelete) {
+          await removeDnsEntry(zoneId, token, entry);
+        }
         continue;
       }
       if (autoWww && entry.name.startsWith("www.") && !domains.includes(entry.name.replace(/^www\./, ""))) {
-        await removeDnsEntry(zoneId, token, entry);
+        if (autoDelete) {
+          await removeDnsEntry(zoneId, token, entry);
+        }
         continue;
       }
 
       // update out of date domains
       if (entry.content !== currentIp) {
-        await updateDnsEntry(zoneId, token, { ...entry, content: currentIp, ttl: ttlSeconds });
+        await updateDnsEntry(zoneId, token, { ...entry, content: currentIp, ttl: ttlSeconds || 120 });
       }
     }
   }
