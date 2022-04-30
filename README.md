@@ -32,7 +32,7 @@ The main configuration - the list of domains - is stored as a JSON file containi
 - `autoDeleteSafelist` - list of regexes for domains to exclude from auto deletion (irrelevant if you haven't enabled `autoDelete`)
 - `domains` - the domains you wish to manage; each should include the TLD and have no leading `.`
 
-For exampple:
+For example:
 
 ```json
 [
@@ -64,6 +64,8 @@ For exampple:
   }
 ]
 ```
+
+See [types.ts](./src/types.ts) for the full details.
 
 ### Environment Variables
 
