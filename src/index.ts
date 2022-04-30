@@ -51,12 +51,26 @@ async function removeDnsEntry(zoneId: string, token: string, entry: IDnsEntry): 
   await axios.delete(`${API_BASE}/zones/${zoneId}/dns_records/${entry.id}`, { headers });
 }
 
+function domainDeletionAllowed(autoDelete: boolean, autoDeleteSafelist: string[], domain: string): boolean {
+  if (!autoDelete) {
+    return false;
+  }
+
+  for (const regex of autoDeleteSafelist || []) {
+    if (new RegExp(regex).test(domain)) {
+      return false;
+    }
+  }
+
+  return true;
+}
+
 async function updateDomains() {
   const zones = readSettings();
   const currentIp = (await axios.get("https://ipecho.net/plain")).data;
   log(`Current IP is ${currentIp}`);
   for (const zone of zones) {
-    const { zoneId, token, ttlSeconds, domains, autoWww, autoDelete } = zone;
+    const { zoneId, token, ttlSeconds, domains, autoWww, autoDelete, autoDeleteSafelist } = zone;
     const dnsEntires = await getDnsEntries(zoneId, token);
 
     // create missing domains
@@ -77,13 +91,13 @@ async function updateDomains() {
     for (const entry of dnsEntires) {
       // remove undeclared domains
       if ((!autoWww || !entry.name.startsWith("www.")) && !domains.includes(entry.name)) {
-        if (autoDelete) {
+        if (domainDeletionAllowed(autoDelete, autoDeleteSafelist, entry.name)) {
           await removeDnsEntry(zoneId, token, entry);
         }
         continue;
       }
       if (autoWww && entry.name.startsWith("www.") && !domains.includes(entry.name.replace(/^www\./, ""))) {
-        if (autoDelete) {
+        if (domainDeletionAllowed(autoDelete, autoDeleteSafelist, entry.name)) {
           await removeDnsEntry(zoneId, token, entry);
         }
         continue;

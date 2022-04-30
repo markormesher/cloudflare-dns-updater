@@ -29,6 +29,7 @@ The main configuration - the list of domains - is stored as a JSON file containi
 - `ttlSeconds` - the TTL value to set when creating new domains (optional, default 120)
 - `autoWww` - whether or not to automatically create and update `www`-prefixed versions of the domains listed (optional, default false)
 - `autoDelete` - whether or not to automatically remove DNS records for domains you have not specified (optional, default false)
+- `autoDeleteSafelist` - list of regexes for domains to exclude from auto deletion (irrelevant if you haven't enabled `autoDelete`)
 - `domains` - the domains you wish to manage; each should include the TLD and have no leading `.`
 
 For exampple:
