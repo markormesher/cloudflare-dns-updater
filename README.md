@@ -42,6 +42,7 @@ For example:
     "ttlSeconds": 120,
     "autoWww": true,
     "autoDelete": true,
+    "autoDeleteSafelist": ["legacy.example.com"],
     "domains": [
       "example.com",
       "sub1.example.com",
