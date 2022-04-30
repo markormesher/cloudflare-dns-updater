@@ -1,8 +1,9 @@
 interface IZoneSettings {
   readonly zoneId: string;
   readonly token: string;
-  readonly ttlSeconds: number;
-  readonly autoWww: boolean;
+  readonly ttlSeconds?: number;
+  readonly autoWww?: boolean;
+  readonly autoDelete?: boolean;
   readonly domains: string[];
 }
 

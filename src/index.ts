@@ -3,14 +3,14 @@ import axios from "axios";
 import { IDnsEntry, IDnsQueryResponse, IZoneSettings } from "./types";
 
 const API_BASE = "https://api.cloudflare.com/client/v4";
-const REPEAT_INTERVAL_MS = 2 * 60 * 1000;
+const REPEAT_INTERVAL_MS = parseInt(process.env.CHECK_INTERVAL_SECONDS) * 1000 || 2 * 60 * 1000;
 
 function log(msg: string) {
   console.log(`[${new Date().toISOString()}] ${msg}`);
 }
 
 function readSettings(): IZoneSettings[] {
-  const settingsFile = process.env.CONFIG_FILE || "/settings.json";
+  const settingsFile = process.env.SETTINGS_FILE || "/settings.json";
   if (!existsSync(settingsFile)) {
     throw new Error(`Settings file ${settingsFile} does not exist!`);
   }
