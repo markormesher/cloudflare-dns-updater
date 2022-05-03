@@ -51,18 +51,40 @@ async function removeDnsEntry(zoneId: string, token: string, entry: IDnsEntry): 
   await axios.delete(`${API_BASE}/zones/${zoneId}/dns_records/${entry.id}`, { headers });
 }
 
-function domainDeletionAllowed(autoDelete: boolean, autoDeleteSafelist: string[], domain: string): boolean {
+function domainDeletionAllowed(
+  autoDelete: boolean,
+  autoDeleteAllowList: string[],
+  autoDeleteBlockList: string[],
+  domain: string,
+): boolean {
+  // semantics:
+  // - if auto delete is disabled, we obviously CANNOT Delete
+  // - if any item on the block list matches, we CANNOT Delete
+  // - if an allow list is set:
+  //   - if any item on the list matches, we CAN delete
+  //   - if no item on the list matches, we CANNOT delete
+  // - if there is no allow list, we CAN delete
+
   if (!autoDelete) {
     return false;
   }
 
-  for (const regex of autoDeleteSafelist || []) {
+  for (const regex of autoDeleteBlockList || []) {
     if (new RegExp(regex).test(domain)) {
       return false;
     }
   }
 
-  return true;
+  if (autoDeleteAllowList) {
+    for (const regex of autoDeleteAllowList || []) {
+      if (new RegExp(regex).test(domain)) {
+        return false;
+      }
+    }
+    return false;
+  } else {
+    return true;
+  }
 }
 
 async function updateDomains() {
@@ -70,7 +92,7 @@ async function updateDomains() {
   const currentIp = (await axios.get("https://ipecho.net/plain")).data;
   log(`Current IP is ${currentIp}`);
   for (const zone of zones) {
-    const { zoneId, token, ttlSeconds, domains, autoWww, autoDelete, autoDeleteSafelist } = zone;
+    const { zoneId, token, ttlSeconds, domains, autoWww, autoDelete, autoDeleteAllowList, autoDeleteBlockList } = zone;
     const dnsEntires = await getDnsEntries(zoneId, token);
 
     // create missing domains
@@ -91,13 +113,13 @@ async function updateDomains() {
     for (const entry of dnsEntires) {
       // remove undeclared domains
       if ((!autoWww || !entry.name.startsWith("www.")) && !domains.includes(entry.name)) {
-        if (domainDeletionAllowed(autoDelete, autoDeleteSafelist, entry.name)) {
+        if (domainDeletionAllowed(autoDelete, autoDeleteAllowList, autoDeleteBlockList, entry.name)) {
           await removeDnsEntry(zoneId, token, entry);
         }
         continue;
       }
       if (autoWww && entry.name.startsWith("www.") && !domains.includes(entry.name.replace(/^www\./, ""))) {
-        if (domainDeletionAllowed(autoDelete, autoDeleteSafelist, entry.name)) {
+        if (domainDeletionAllowed(autoDelete, autoDeleteAllowList, autoDeleteBlockList, entry.name)) {
           await removeDnsEntry(zoneId, token, entry);
         }
         continue;
