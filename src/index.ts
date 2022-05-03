@@ -58,8 +58,8 @@ function domainDeletionAllowed(
   domain: string,
 ): boolean {
   // semantics:
-  // - if auto delete is disabled, we obviously CANNOT Delete
-  // - if any item on the block list matches, we CANNOT Delete
+  // - if auto delete is disabled, we obviously CANNOT delete
+  // - if any item on the block list matches, we CANNOT delete
   // - if an allow list is set:
   //   - if any item on the list matches, we CAN delete
   //   - if no item on the list matches, we CANNOT delete
