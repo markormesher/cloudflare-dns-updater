@@ -4,7 +4,8 @@ interface IZoneSettings {
   readonly ttlSeconds?: number;
   readonly autoWww?: boolean;
   readonly autoDelete?: boolean;
-  readonly autoDeleteSafelist?: string[];
+  readonly autoDeleteAllowList?: string[];
+  readonly autoDeleteBlockList?: string[];
   readonly domains: string[];
 }
 
