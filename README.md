@@ -90,3 +90,7 @@ services:
     volumes:
       - ./settings.json:/settings.json:ro
 ```
+
+## Health Check
+
+Unless disabled by setting the environment variable `HEALTH_CHECK_SERVER_PORT` to `-1`, a basic health check endpoint is available at `/health` on the port specified. If a successful update or no-op has run in the last `2 * CHECK_INTERVAL_SECONDS` it will return 200, otherwise 500.
