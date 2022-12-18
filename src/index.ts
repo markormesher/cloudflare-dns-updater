@@ -1,5 +1,5 @@
 import { readFileSync, existsSync } from "fs";
-import http from "http";
+import * as http from "http";
 import axios from "axios";
 import { IDnsEntry, IDnsQueryResponse, IZoneSettings } from "./types";
 
