@@ -72,10 +72,11 @@ See [types.ts](./src/types.ts) for the full details.
 
 ### Environment Variables
 
-| Variable                 | Required? | Description                                               | Default          |
-| ------------------------ | --------- | --------------------------------------------------------- | ---------------- |
-| `SETTINGS_FILE`          | no        | Path to where your JSON settings file is.                 | `/settings.json` |
-| `CHECK_INTERVAL_SECONDS` | no        | How often to re-check your IP address and update records. | 120              |
+| Variable                   | Required? | Description                                                        | Default          |
+| -------------------------- | --------- | ------------------------------------------------------------------ | ---------------- |
+| `SETTINGS_FILE`            | no        | Path to where your JSON settings file is.                          | `/settings.json` |
+| `CHECK_INTERVAL_SECONDS`   | no        | How often to re-check your IP address and update records.          | 120              |
+| `HEALTH_CHECK_SERVER_PORT` | no        | Port on which to run an HTTP health check endpoint; -1 to disable. | 8080             |
 
 ## Quick-Start Docker-Compose Example
 
