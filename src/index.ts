@@ -27,8 +27,8 @@ if (HEALTH_CHECK_SERVER_PORT > 0) {
     .listen(HEALTH_CHECK_SERVER_PORT);
 }
 
-function log(msg: string) {
-  console.log(`[${new Date().toISOString()}] ${msg}`);
+function log(msg: string, error?: unknown) {
+  console.log(`[${new Date().toISOString()}] ${msg}`, { error });
 }
 
 function readSettings(): IZoneSettings[] {
@@ -109,9 +109,24 @@ function domainDeletionAllowed(
   }
 }
 
+async function getCurrentIp(): Promise<string> {
+  let tries = 0;
+  const maxTries = 3;
+  while (tries < maxTries) {
+    ++tries;
+    try {
+      return (await axios.get("https://ipecho.net/plain")).data;
+    } catch (error) {
+      log(`Failed to get current IP on attempt #${tries}, waiting 5s before trying again`, error);
+      await new Promise((resolve) => setTimeout(resolve, 5000));
+    }
+  }
+  throw new Error(`Failed to get current IP after ${maxTries} attempts`);
+}
+
 async function updateDomains() {
   const zones = readSettings();
-  const currentIp = (await axios.get("https://ipecho.net/plain")).data;
+  const currentIp = await getCurrentIp();
   log(`Current IP is ${currentIp}`);
   for (const zone of zones) {
     const { zoneId, token, ttlSeconds, domains, autoWww, autoDelete, autoDeleteAllowList, autoDeleteBlockList } = zone;
