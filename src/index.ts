@@ -27,8 +27,8 @@ if (HEALTH_CHECK_SERVER_PORT > 0) {
     .listen(HEALTH_CHECK_SERVER_PORT);
 }
 
-function log(msg: string, error?: unknown) {
-  console.log(`[${new Date().toISOString()}] ${msg}`, { error });
+function log(msg: string, params: Record<string, unknown> = undefined) {
+  console.log(`[${new Date().toISOString()}] ${msg}`, params);
 }
 
 function readSettings(): IZoneSettings[] {
@@ -117,7 +117,7 @@ async function getCurrentIp(): Promise<string> {
     try {
       return (await axios.get("https://ipecho.net/plain")).data;
     } catch (error) {
-      log(`Failed to get current IP on attempt #${tries}, waiting 5s before trying again`, error);
+      log(`Failed to get current IP on attempt #${tries}, waiting 5s before trying again`, { error });
       await new Promise((resolve) => setTimeout(resolve, 5000));
     }
   }
