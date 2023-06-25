@@ -1,4 +1,4 @@
-FROM node:16.14.2-alpine
+FROM node:20.3.0-alpine
 
 WORKDIR /cloudflare-dns-updater
 
