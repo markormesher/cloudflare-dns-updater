@@ -3,7 +3,7 @@ version: 2
 defaults: &defaults
   working_directory: ~/app
   docker:
-    - image: cimg/node:20.3.1
+    - image: cimg/node:20.2.0
 
 jobs:
   setup:
