@@ -1,7 +1,7 @@
 {
   "type": "module",
   "name": "cloudflare-dns-updater",
-  "version": "1.0.1",
+  "version": "1.0.2",
   "main": "build/index.js",
   "license": "AGPL-3.0",
   "scripts": {
