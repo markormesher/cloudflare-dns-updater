@@ -37,45 +37,40 @@ jobs:
             yarn lint
             yarn dedupe -c
 
+  pre-publish:
+    <<: *defaults
+    docker:
+      - image: alpine/git
+    steps:
+      - run:
+          name: Set container destination
+          command: |
+            touch .destination
+            if git describe --exact-match HEAD > /dev/null 2>&1; then
+              echo "--destination ghcr.io/markormesher/${CIRCLE_PROJECT_REPONAME}:$(git describe --tags)" | tee .destination
+            else
+          echo "--no-push" | tee .destination
+            fi
+      - persist_to_workspace:
+          root: .
+          paths:
+            - .
+
   build-publish:
     <<: *defaults
+    docker:
+      - image: gcr.io/kaniko-project/executor:v1.17.0-debug
     steps:
       - attach_workspace:
           at: .
-      - setup_remote_docker:
-          version: 20.10.12
-      - restore_cache:
-          keys:
-            - docker-v1-{{ .Branch }}
-            - docker-v1
       - run:
-          name: Load Docker cache
+          name: Build container image
+          # TODO cache?
           command: |
-            docker load -i ~/cache/docker.tar || true
-      - run:
-          name: Build Docker image
-          command: |
-            docker build --cache-from=cache -t ghcr.io/markormesher/cloudflare-dns-updater:$(git describe) .
-            docker image ls
-      - run:
-          name: Maybe publish Docker image
-          command: |
-            # publish tagged commits only
-            if ! git describe --exact-match HEAD > /dev/null 2>&1; then echo "Not on tagged commit - nothing to do"; exit 0; fi
-            echo "${GHCR_PUBLISH_TOKEN}" | docker login ghcr.io -u markormesher --password-stdin
-            docker push ghcr.io/markormesher/cloudflare-dns-updater:$(git describe)
-      - run:
-          name: Create Docker cache
-          command: |
-            rm -rf ~/cache
-            mkdir ~/cache
-            docker tag ghcr.io/markormesher/cloudflare-dns-updater:$(git describe) cache
-            docker save -o ~/cache/docker.tar cache
-            ls -lh ~/cache/docker.tar
-      - save_cache:
-          key: docker-v1-{{ .Branch }}-{{ epoch }}
-          paths:
-            - ~/cache
+            echo '{"auths":{"ghcr.io":{"auth":"${GHCR_PUBLISH_TOKEN}"}}}'
+            /kaniko/executor \
+              --context dir:///app \
+              $(cat .destination)
 
 workflows:
   version: 2
@@ -85,6 +80,10 @@ workflows:
       - lint:
           requires:
             - setup
+      - pre-publish:
+          requires:
+            - setup
       - build-publish:
           requires:
+            - pre-publish
             - lint
