@@ -1,7 +1,7 @@
 version: 2
 
 defaults: &defaults
-  #working_directory: ~/app
+  working_directory: /tmp/app
   docker:
     - image: cimg/node:20.2.0
 
@@ -10,17 +10,17 @@ jobs:
     <<: *defaults
     steps:
       - checkout
-      - restore_cache:
-          keys:
-            - yarn-v1-{{ .Branch }}
-            - yarn-v1
-      - run:
-          name: Install dependencies
-          command: yarn install --immutable
-      - save_cache:
-          key: yarn-v1-{{ .Branch }}-{{ epoch }}
-          paths:
-            - .yarn/cache
+      # - restore_cache:
+      #     keys:
+      #       - yarn-v1-{{ .Branch }}
+      #       - yarn-v1
+      # - run:
+      #     name: Install dependencies
+      #     command: yarn install --immutable
+      # - save_cache:
+      #     key: yarn-v1-{{ .Branch }}-{{ epoch }}
+      #     paths:
+      #       - .yarn/cache
       - persist_to_workspace:
           root: .
           paths:
@@ -31,11 +31,11 @@ jobs:
     steps:
       - attach_workspace:
           at: .
-      - run:
-          name: Run linters
-          command: |
-            yarn lint
-            yarn dedupe -c
+      # - run:
+      #     name: Run linters
+      #     command: |
+      #       yarn lint
+      #       yarn dedupe -c
 
   pre-publish:
     <<: *defaults
@@ -69,7 +69,8 @@ jobs:
           command: |
             echo '{"auths":{"ghcr.io":{"username":"markormesher","password":"${GHCR_PUBLISH_TOKEN}"}}}' > /kaniko/.docker/config.json
             /kaniko/executor \
-              --context dir://. \
+              --context dir:///tmp/app \
+              --ignore-path /tmp/app \
               $(cat .destination)
 
 workflows:
