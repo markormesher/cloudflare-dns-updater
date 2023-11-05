@@ -43,6 +43,14 @@ jobs:
       - image: alpine/git
     steps:
       - run:
+          name: Docker login
+          command: |
+            echo "${GHCR_PUBLISH_TOKEN}" | docker login ghcr.io --username markormesher --password-stdin
+      - persist_to_workspace:
+          root: /root/.docker
+          paths:
+            - /root/.docker/config.json
+      - run:
           name: Set container destination
           command: |
             touch .destination
@@ -67,7 +75,6 @@ jobs:
           name: Build container image
           # TODO cache?
           command: |
-            echo '{"auths":{"ghcr.io":{"username":"markormesher","password":"${GHCR_PUBLISH_TOKEN}"}}}' > /kaniko/.docker/config.json
             /kaniko/executor \
               --cache \
               --cache-repo ghcr.io/markormesher/${CIRCLE_PROJECT_REPONAME} \
