@@ -10,17 +10,17 @@ jobs:
     <<: *defaults
     steps:
       - checkout
-      # - restore_cache:
-      #     keys:
-      #       - yarn-v1-{{ .Branch }}
-      #       - yarn-v1
-      # - run:
-      #     name: Install dependencies
-      #     command: yarn install --immutable
-      # - save_cache:
-      #     key: yarn-v1-{{ .Branch }}-{{ epoch }}
-      #     paths:
-      #       - .yarn/cache
+      - restore_cache:
+          keys:
+            - yarn-v1-{{ .Branch }}
+            - yarn-v1
+      - run:
+          name: Install dependencies
+          command: yarn install --immutable
+      - save_cache:
+          key: yarn-v1-{{ .Branch }}-{{ epoch }}
+          paths:
+            - .yarn/cache
       - persist_to_workspace:
           root: .
           paths:
@@ -31,11 +31,21 @@ jobs:
     steps:
       - attach_workspace:
           at: .
-      # - run:
-      #     name: Run linters
-      #     command: |
-      #       yarn lint
-      #       yarn dedupe -c
+      - run:
+          name: Run linters
+          command: |
+            yarn lint
+            yarn dedupe -c
+
+  build:
+    <<: *defaults
+    steps:
+      - attach_workspace:
+          at: .
+      - run:
+          name: Run build
+          command: |
+            yarn build
 
   pre-publish:
     <<: *defaults
@@ -56,7 +66,7 @@ jobs:
           paths:
             - .
 
-  build-publish:
+  publish:
     <<: *defaults
     docker:
       - image: gcr.io/kaniko-project/executor:v1.17.0-debug
@@ -84,10 +94,13 @@ workflows:
       - lint:
           requires:
             - setup
-      - pre-publish:
+      - build:
           requires:
             - setup
-      - build-publish:
+      - pre-publish:
+          requires:
+            - lint
+            - build
+      - publish:
           requires:
             - pre-publish
-            - lint
