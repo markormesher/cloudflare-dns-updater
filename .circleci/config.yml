@@ -49,7 +49,7 @@ jobs:
       - persist_to_workspace:
           root: /root/.docker
           paths:
-            - /root/.docker/config.json
+            - config.json
       - run:
           name: Set container destination
           command: |
