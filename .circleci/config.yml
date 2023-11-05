@@ -67,9 +67,9 @@ jobs:
           name: Build container image
           # TODO cache?
           command: |
-            echo '{"auths":{"ghcr.io":{"auth":"${GHCR_PUBLISH_TOKEN}"}}}'
+            echo '{"auths":{"ghcr.io":{"auth":"${GHCR_PUBLISH_TOKEN}"}}}' > /kaniko/.docker/config.json
             /kaniko/executor \
-              --context dir:///app \
+              --context dir://~/app \
               $(cat .destination)
 
 workflows:
