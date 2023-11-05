@@ -52,6 +52,8 @@ jobs:
     docker:
       - image: alpine/git
     steps:
+      - attach_workspace:
+          at: .
       - run:
           name: Set container destination
           command: |
