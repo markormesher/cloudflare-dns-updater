@@ -1,7 +1,7 @@
 version: 2
 
 defaults: &defaults
-  working_directory: ~/app
+  working_directory: /tmp/app
   docker:
     - image: cimg/node:20.9.0
 
@@ -37,45 +37,54 @@ jobs:
             yarn lint
             yarn dedupe -c
 
-  build-publish:
+  build:
     <<: *defaults
     steps:
       - attach_workspace:
           at: .
-      - setup_remote_docker:
-          version: 20.10.12
-      - restore_cache:
-          keys:
-            - docker-v1-{{ .Branch }}
-            - docker-v1
       - run:
-          name: Load Docker cache
+          name: Run build
           command: |
-            docker load -i ~/cache/docker.tar || true
+            yarn build
+
+  pre-publish:
+    <<: *defaults
+    docker:
+      - image: alpine/git
+    steps:
       - run:
-          name: Build Docker image
+          name: Set container destination
           command: |
-            docker build --cache-from=cache -t ghcr.io/markormesher/cloudflare-dns-updater:$(git describe) .
-            docker image ls
-      - run:
-          name: Maybe publish Docker image
-          command: |
-            # publish tagged commits only
-            if ! git describe --exact-match HEAD > /dev/null 2>&1; then echo "Not on tagged commit - nothing to do"; exit 0; fi
-            echo "${GHCR_PUBLISH_TOKEN}" | docker login ghcr.io -u markormesher --password-stdin
-            docker push ghcr.io/markormesher/cloudflare-dns-updater:$(git describe)
-      - run:
-          name: Create Docker cache
-          command: |
-            rm -rf ~/cache
-            mkdir ~/cache
-            docker tag ghcr.io/markormesher/cloudflare-dns-updater:$(git describe) cache
-            docker save -o ~/cache/docker.tar cache
-            ls -lh ~/cache/docker.tar
-      - save_cache:
-          key: docker-v1-{{ .Branch }}-{{ epoch }}
+            touch .destination
+            if git describe --exact-match HEAD > /dev/null 2>&1; then
+              echo "--destination ghcr.io/markormesher/${CIRCLE_PROJECT_REPONAME}:$(git describe --tags)" | tee .destination
+            else
+              echo "--no-push" | tee .destination
+            fi
+      - persist_to_workspace:
+          root: .
           paths:
-            - ~/cache
+            - .
+
+  publish:
+    <<: *defaults
+    docker:
+      - image: gcr.io/kaniko-project/executor:v1.17.0-debug
+        entrypoint: ""
+    steps:
+      - attach_workspace:
+          at: .
+      - run:
+          name: Build container image
+          command: |
+            AUTH=$(echo -n "markormesher:${GHCR_PUBLISH_TOKEN}" | base64)
+            echo '{"auths":{"ghcr.io":{"auth":"'${AUTH}'"}}}' > /kaniko/.docker/config.json
+            /kaniko/executor \
+              --cache \
+              --cache-repo ghcr.io/markormesher/${CIRCLE_PROJECT_REPONAME} \
+              --context dir:///tmp/app \
+              --ignore-path /tmp/app \
+              $(cat .destination)
 
 workflows:
   version: 2
@@ -85,6 +94,13 @@ workflows:
       - lint:
           requires:
             - setup
-      - build-publish:
+      - build:
+          requires:
+            - setup
+      - pre-publish:
           requires:
             - lint
+            - build
+      - publish:
+          requires:
+            - pre-publish
