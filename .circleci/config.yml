@@ -69,6 +69,8 @@ jobs:
           command: |
             echo '{"auths":{"ghcr.io":{"username":"markormesher","password":"${GHCR_PUBLISH_TOKEN}"}}}' > /kaniko/.docker/config.json
             /kaniko/executor \
+              --cache \
+              --cache-repo ghcr.io/markormesher/${CIRCLE_PROJECT_REPONAME} \
               --context dir:///tmp/app \
               --ignore-path /tmp/app \
               $(cat .destination)
