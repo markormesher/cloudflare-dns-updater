@@ -91,11 +91,13 @@ function domainDeletionAllowed(
   // - if there is no allow list, we CAN delete
 
   if (!autoDelete) {
+    log(`Not deleting ${domain} because auto-delete is disabled`);
     return false;
   }
 
   for (const regex of autoDeleteBlockList || []) {
     if (new RegExp(regex).test(domain)) {
+      log(`Not deleting ${domain} because it matches an entry on the auto-delete block list`);
       return false;
     }
   }
@@ -103,9 +105,10 @@ function domainDeletionAllowed(
   if (autoDeleteAllowList) {
     for (const regex of autoDeleteAllowList || []) {
       if (new RegExp(regex).test(domain)) {
-        return false;
+        return true;
       }
     }
+    log(`Not deleting ${domain} because it does not match any entry on the auto-delete allow list`);
     return false;
   } else {
     return true;
@@ -169,16 +172,12 @@ async function updateDomains() {
       if ((!autoWww || !entry.name.startsWith("www.")) && !domains.includes(entry.name)) {
         if (domainDeletionAllowed(autoDelete, autoDeleteAllowList, autoDeleteBlockList, entry.name)) {
           await removeDnsEntry(zoneId, token, entry);
-        } else {
-          log(`Domain ${entry.name} appears to be unused but is not eligible for deletion`);
         }
         continue;
       }
       if (autoWww && entry.name.startsWith("www.") && !domains.includes(entry.name.replace(/^www\./, ""))) {
         if (domainDeletionAllowed(autoDelete, autoDeleteAllowList, autoDeleteBlockList, entry.name)) {
           await removeDnsEntry(zoneId, token, entry);
-        } else {
-          log(`Domain ${entry.name} appears to be unused but is not eligible for deletion`);
         }
         continue;
       }
