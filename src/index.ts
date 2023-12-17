@@ -3,8 +3,8 @@ import * as http from "http";
 import { DnsEntry, DnsQueryResponse, ZoneSettings } from "./types.js";
 
 const API_BASE = "https://api.cloudflare.com/client/v4";
-const REPEAT_INTERVAL_MS = parseInt(process.env.CHECK_INTERVAL_SECONDS ?? "120") * 1000 || 2 * 60 * 1000;
-const HEALTH_CHECK_SERVER_PORT = parseInt(process.env.HEALTH_CHECK_SERVER_PORT ?? "8080") || 8080;
+const REPEAT_INTERVAL_MS = parseInt(process.env.CHECK_INTERVAL_SECONDS ?? "120") * 1000 ?? 2 * 60 * 1000;
+const HEALTH_CHECK_SERVER_PORT = parseInt(process.env.HEALTH_CHECK_SERVER_PORT ?? "8080") ?? 8080;
 
 // health check
 let lastSuccessMs = 0;
@@ -95,15 +95,15 @@ function domainDeletionAllowed(
     return false;
   }
 
-  for (const regex of autoDeleteBlockList || []) {
+  for (const regex of autoDeleteBlockList ?? []) {
     if (new RegExp(regex).test(domain)) {
       log(`Not deleting ${domain} because it matches an entry on the auto-delete block list`);
       return false;
     }
   }
 
-  if (autoDeleteAllowList) {
-    for (const regex of autoDeleteAllowList || []) {
+  if (autoDeleteAllowList && autoDeleteAllowList.length > 0) {
+    for (const regex of autoDeleteAllowList ?? []) {
       if (new RegExp(regex).test(domain)) {
         return true;
       }
