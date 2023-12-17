@@ -169,12 +169,16 @@ async function updateDomains() {
       if ((!autoWww || !entry.name.startsWith("www.")) && !domains.includes(entry.name)) {
         if (domainDeletionAllowed(autoDelete, autoDeleteAllowList, autoDeleteBlockList, entry.name)) {
           await removeDnsEntry(zoneId, token, entry);
+        } else {
+          log(`Domain ${entry.name} appears to be unused but is not eligible for deletion`);
         }
         continue;
       }
       if (autoWww && entry.name.startsWith("www.") && !domains.includes(entry.name.replace(/^www\./, ""))) {
         if (domainDeletionAllowed(autoDelete, autoDeleteAllowList, autoDeleteBlockList, entry.name)) {
           await removeDnsEntry(zoneId, token, entry);
+        } else {
+          log(`Domain ${entry.name} appears to be unused but is not eligible for deletion`);
         }
         continue;
       }
