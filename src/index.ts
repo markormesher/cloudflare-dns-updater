@@ -1,30 +1,8 @@
 import { readFileSync, existsSync } from "fs";
-import * as http from "http";
 import { DnsEntry, DnsQueryResponse, ZoneSettings } from "./types.js";
 
 const API_BASE = "https://api.cloudflare.com/client/v4";
 const REPEAT_INTERVAL_MS = parseInt(process.env.CHECK_INTERVAL_SECONDS ?? "120") * 1000 ?? 2 * 60 * 1000;
-const HEALTH_CHECK_SERVER_PORT = parseInt(process.env.HEALTH_CHECK_SERVER_PORT ?? "8080") ?? 8080;
-
-// health check
-let lastSuccessMs = 0;
-if (HEALTH_CHECK_SERVER_PORT > 0) {
-  http
-    .createServer((req, res) => {
-      if (req.method == "GET" && req.url == "/health") {
-        const nowMs = new Date().getTime();
-        const sinceLastSuccessMs = nowMs - lastSuccessMs;
-        if (sinceLastSuccessMs <= REPEAT_INTERVAL_MS * 2) {
-          res.writeHead(200).end();
-        } else {
-          res.writeHead(500).end();
-        }
-      } else {
-        res.writeHead(404).end();
-      }
-    })
-    .listen(HEALTH_CHECK_SERVER_PORT);
-}
 
 function log(msg: string, params?: Record<string, unknown>) {
   console.log(`[${new Date().toISOString()}] ${msg}`, { ...params });
@@ -188,16 +166,11 @@ async function updateDomains() {
       }
     }
   }
-
-  lastSuccessMs = new Date().getTime();
-  setTimeout(updateDomainsWrapped, REPEAT_INTERVAL_MS);
 }
 
-// utility method so we can write the main method as async
-function updateDomainsWrapped(): void {
+setInterval(() => {
   updateDomains().catch((error) => {
-    log("Encountered an error during update", { error: error as Error });
+    log("Encountered an error during update - exiting");
+    throw error;
   });
-}
-
-updateDomainsWrapped();
+}, REPEAT_INTERVAL_MS);
