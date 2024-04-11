@@ -1,4 +1,4 @@
-FROM node:21.7.3-alpine@sha256:0a50081b5723b3cfe2ef3a3c5675906b0bb942a4b8ede1f6ba5be6ec88413ec4 AS builder
+FROM node:21.7.3-alpine@sha256:6d0f18a1c67dc218c4af50c21256616286a53c09e500fadf025b6d342e1c90ae AS builder
 
 WORKDIR /app
 
@@ -13,7 +13,7 @@ RUN yarn build
 
 # ---
 
-FROM node:21.7.3-alpine@sha256:0a50081b5723b3cfe2ef3a3c5675906b0bb942a4b8ede1f6ba5be6ec88413ec4
+FROM node:21.7.3-alpine@sha256:6d0f18a1c67dc218c4af50c21256616286a53c09e500fadf025b6d342e1c90ae
 
 WORKDIR /app
 
