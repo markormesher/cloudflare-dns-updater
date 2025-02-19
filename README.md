@@ -4,7 +4,7 @@
 
 A utility for updating A records on [Cloudflare DNS](https://www.cloudflare.com/en-gb/dns/) to point at your current IP, which is ideal if you self-host Internet-facing services but do not have a static IP address. Once configured with a list of domains, this tool will:
 
-- Check your IP address every 2 minutes (configurable).
+- Check your local IP address.
 - Add A records for any domains on your list that aren't configured on Cloudflare.
   - `www.` prefixes are handled automatically if you want them to be.
 - Update existing A records when your IP address changes.
@@ -27,7 +27,7 @@ The main configuration - the list of domains - is stored as a JSON file containi
 - `zoneId` - your Cloudflare zone ID
 - `token` - a service token with permission to update DNS records
 - `ttlSeconds` - the TTL value to set when creating new domains (optional, default 120)
-- `autoWww` - whether or not to automatically create and update `www`-prefixed versions of the domains listed (optional, default false)
+- `autoWww` - whether or not to automatically create and update `www.`-prefixed versions of the domains listed (optional, default false)
 - `autoDelete` - whether or not to automatically remove DNS records for domains you have not specified (optional, default false)
 - `autoDeleteAllowList` - list of regexes for domains that eligible for auto-removal (optional, default empty = all domains are eligible)
 - `autoDeleteBlockList` - list of regexes for domains that ineligible for auto-removal (optional, default empty = all domains are eligible)
@@ -43,7 +43,7 @@ For example:
     "ttlSeconds": 120,
     "autoWww": true,
     "autoDelete": true,
-    "autoDeleteBlockList": ["legacy.example.com"],
+    "autoDeleteBlockList": ["legacy\.example\.com"],
     "domains": [
       "example.com",
       "sub1.example.com",
@@ -57,7 +57,7 @@ For example:
     "ttlSeconds": 120,
     "autoWww": true,
     "autoDelete": true,
-    "autoDeleteAllowList": ["sub.*.example.net"],
+    "autoDeleteAllowList": ["sub\..*\.example\.net"],
     "domains": [
       "example.net",
       "sub1.example.net",
@@ -68,14 +68,14 @@ For example:
 ]
 ```
 
-See [types.ts](./src/types.ts) for the full details.
-
 ### Environment Variables
 
 | Variable                   | Required? | Description                                                        | Default          |
 | -------------------------- | --------- | ------------------------------------------------------------------ | ---------------- |
 | `SETTINGS_FILE`            | yes       | Path to where your JSON settings file is.                          | _none_           |
-| `CHECK_INTERVAL_SECONDS`   | no        | How often to re-check your IP address and update records.          | 120              |
+| `CHECK_INTERVAL_SECONDS`   | no        | How often to re-check your IP address and update records.          | 0                |
+
+Note that if `CHECK_INTERVAL_SECONDS` is zero or absent the tool will run once and then exit.
 
 ## Quick-Start Docker-Compose Example
 
@@ -88,6 +88,7 @@ services:
     restart: unless-stopped
     environment:
       - "SETTINGS_FILE=/settings.json"
+      - "CHECK_INTERVAL_SECONDS=180"
     volumes:
       - ./settings.json:/settings.json:ro
 ```
