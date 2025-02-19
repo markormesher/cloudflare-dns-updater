@@ -1,106 +1,116 @@
-version: 2
+# This file is maintained by Tedium - manual edits will be overwritten!
 
-defaults: &defaults
-  working_directory: /tmp/app
-  docker:
-    - image: cimg/node:21.7.3
-
+version: "2.1"
 jobs:
-  setup:
-    <<: *defaults
+  checkout:
+    docker:
+      - image: cimg/base:2024.12
     steps:
-      - checkout
-      - restore_cache:
-          keys:
-            - yarn-v1-{{ .Branch }}
-            - yarn-v1
-      - run:
-          name: Install dependencies
-          command: yarn install --immutable
-      - save_cache:
-          key: yarn-v1-{{ .Branch }}-{{ epoch }}
-          paths:
-            - .yarn/cache
+      - checkout:
+          path: .
       - persist_to_workspace:
           root: .
           paths:
             - .
-
-  lint:
-    <<: *defaults
-    steps:
-      - attach_workspace:
-          at: .
-      - run:
-          name: Run linters
-          command: |
-            yarn lint
-            yarn dedupe -c
-
-  build:
-    <<: *defaults
-    steps:
-      - attach_workspace:
-          at: .
-      - run:
-          name: Run build
-          command: |
-            yarn build
-
-  pre-publish:
-    <<: *defaults
+  ci-all:
     docker:
-      - image: alpine/git
+      - image: cimg/base:2024.12
     steps:
       - attach_workspace:
           at: .
       - run:
-          name: Set container destination
-          command: |
-            touch .destination
-            if git describe --exact-match HEAD > /dev/null 2>&1; then
-              echo "--destination ghcr.io/markormesher/${CIRCLE_PROJECT_REPONAME}:$(git describe --tags)" | tee .destination
-            else
-              echo "--no-push" | tee .destination
-            fi
+          command: echo "Done"
+  fetch-task:
+    docker:
+      - image: ghcr.io/markormesher/task-fetcher:v0.4.1
+    steps:
+      - attach_workspace:
+          at: .
+      - run:
+          command: cp /task .
       - persist_to_workspace:
           root: .
           paths:
-            - .
-
-  publish:
-    <<: *defaults
+            - ./task
+  imgbuild-imgpush:
     docker:
-      - image: gcr.io/kaniko-project/executor:v1.19.2-debug
-        entrypoint: ""
+      - image: cimg/base:2024.12
+    steps:
+      - attach_workspace:
+          at: .
+      - setup_remote_docker:
+          docker_layer_caching: true
+      - run:
+          command: |-
+            echo "${GHCR_PUBLISH_TOKEN}" | docker login ghcr.io -u markormesher --password-stdin
+            ./task imgbuild
+            ./task imgpush
+  imgrefs:
+    docker:
+      - image: docker.io/alpine/git:v2.47.1
     steps:
       - attach_workspace:
           at: .
       - run:
-          name: Build container image
-          command: |
-            AUTH=$(echo -n "markormesher:${GHCR_PUBLISH_TOKEN}" | base64)
-            echo '{"auths":{"ghcr.io":{"auth":"'${AUTH}'"}}}' > /kaniko/.docker/config.json
-            /kaniko/executor \
-              --context dir:///tmp/app \
-              --ignore-path /tmp/app \
-              $(cat .destination)
-
+          command: ./task imgrefs
+      - persist_to_workspace:
+          root: .
+          paths:
+            - ./.imgrefs
+            - ./**/.imgrefs
+  lint-go:
+    docker:
+      - image: docker.io/golang:1.24.0
+    steps:
+      - attach_workspace:
+          at: .
+      - run:
+          command: |-
+            export GOPATH=$(pwd)/.go
+            ./task lint-go
 workflows:
   version: 2
   main:
     jobs:
-      - setup
-      - lint:
+      - checkout:
+          requires: []
+          filters:
+            tags:
+              only: /.*/
+      - fetch-task:
           requires:
-            - setup
-      - build:
+            - checkout
+          filters:
+            tags:
+              only: /.*/
+      - imgrefs:
           requires:
-            - setup
-      - pre-publish:
+            - checkout
+            - fetch-task
+          filters:
+            tags:
+              only: /.*/
+      - lint-go:
           requires:
-            - lint
-            - build
-      - publish:
+            - checkout
+            - fetch-task
+          filters:
+            tags:
+              only: /.*/
+      - imgbuild-imgpush:
           requires:
-            - pre-publish
+            - checkout
+            - fetch-task
+            - imgrefs
+            - lint-go
+          filters:
+            tags:
+              only: /.*/
+      - ci-all:
+          requires:
+            - imgbuild-imgpush
+            - imgrefs
+            - lint-go
+          filters:
+            tags:
+              only: /.*/
