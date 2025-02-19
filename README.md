@@ -74,7 +74,7 @@ See [types.ts](./src/types.ts) for the full details.
 
 | Variable                   | Required? | Description                                                        | Default          |
 | -------------------------- | --------- | ------------------------------------------------------------------ | ---------------- |
-| `SETTINGS_FILE`            | no        | Path to where your JSON settings file is.                          | `/settings.json` |
+| `SETTINGS_FILE`            | yes       | Path to where your JSON settings file is.                          | _none_           |
 | `CHECK_INTERVAL_SECONDS`   | no        | How often to re-check your IP address and update records.          | 120              |
 
 ## Quick-Start Docker-Compose Example
@@ -86,6 +86,8 @@ services:
   cloudflare-dns-updater:
     image: ghcr.io/markormesher/cloudflare-dns-updater:VERSION
     restart: unless-stopped
+    environment:
+      - "SETTINGS_FILE=/settings.json"
     volumes:
       - ./settings.json:/settings.json:ro
 ```
