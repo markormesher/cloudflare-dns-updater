@@ -1,6 +1,6 @@
 module github.com/markormesher/cloudflare-dns-updater
 
-go 1.24.0
+go 1.24.1
 
 require github.com/go-resty/resty/v2 v2.16.5
 
