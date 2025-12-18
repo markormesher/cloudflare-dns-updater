@@ -2,7 +2,7 @@ module github.com/markormesher/cloudflare-dns-updater
 
 go 1.25.3
 
-require github.com/go-resty/resty/v2 v2.17.0
+require github.com/go-resty/resty/v2 v2.17.1
 
 require (
 	github.com/BurntSushi/toml v1.4.1-0.20240526193622-a339e1f7089c // indirect
