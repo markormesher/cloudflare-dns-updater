@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+	"log/slog"
 	"os"
 	"regexp"
 	"slices"
@@ -12,29 +13,29 @@ import (
 func main() {
 	settings, err := getSettings()
 	if err != nil {
-		l.Error("error getting settings", "error", err)
+		slog.Error("error getting settings", "error", err)
 		os.Exit(1)
 	}
 
 	interval, err := getCheckInterval()
 	if err != nil {
-		l.Error("error getting check interval", "error", err)
+		slog.Error("error getting check interval", "error", err)
 		os.Exit(1)
 	}
 
 	wrappedRun := func() {
 		err := runUpdate(settings)
 		if err != nil {
-			l.Error("error running update", "error", err)
+			slog.Error("error running update", "error", err)
 			os.Exit(1)
 		}
 	}
 
 	if interval == 0 {
-		l.Info("no check interval set - running once then exiting")
+		slog.Info("no check interval set - running once then exiting")
 		wrappedRun()
 	} else {
-		l.Info("running repeatedly", "interval", interval)
+		slog.Info("running repeatedly", "interval", interval)
 		for ; true; <-time.Tick(time.Duration(interval) * time.Second) {
 			wrappedRun()
 		}
@@ -42,14 +43,14 @@ func main() {
 }
 
 func runUpdate(settings []ZoneSettings) error {
-	currentIp, err := getIpAddress()
+	currentIP, err := getIPAddress()
 	if err != nil {
 		return fmt.Errorf("error getting current IP address: %w", err)
 	}
-	l.Info("got current IP", "ip", currentIp)
+	slog.Info("got current IP", "ip", currentIP)
 
 	for _, zone := range settings {
-		l.Info("checking zone", "zone", zone.ZoneID)
+		slog.Info("checking zone", "zone", zone.ZoneID)
 
 		autoDeleteAllowList := make([]*regexp.Regexp, 0, len(zone.AutoDeleteAllowList))
 		for _, patternStr := range zone.AutoDeleteAllowList {
@@ -69,7 +70,7 @@ func runUpdate(settings []ZoneSettings) error {
 			autoDeleteBlockList = append(autoDeleteBlockList, pattern)
 		}
 
-		entries, err := getDnsEntries(zone.ZoneID, zone.Token)
+		entries, err := getDNSEntries(zone.ZoneID, zone.Token)
 		if err != nil {
 			return fmt.Errorf("error getting current entries: %w", err)
 		}
@@ -79,18 +80,18 @@ func runUpdate(settings []ZoneSettings) error {
 			knownDomains = append(knownDomains, e.Name)
 		}
 
-		zoneTtl := zone.TTLSeconds
-		if zoneTtl == 0 {
-			zoneTtl = 120
+		zoneTTL := zone.TTLSeconds
+		if zoneTTL == 0 {
+			zoneTTL = 120
 		}
 
 		// creating missing entries
 		for _, domain := range zone.Domains {
 			if !slices.Contains(knownDomains, domain) {
-				err := updateDnsEntry(zone.ZoneID, zone.Token, DnsEntry{
+				err := updateDNSEntry(zone.ZoneID, zone.Token, DNSEntry{
 					Name:    domain,
-					Content: currentIp,
-					TTL:     zoneTtl,
+					Content: currentIP,
+					TTL:     zoneTTL,
 					Type:    "A",
 				})
 				if err != nil {
@@ -98,10 +99,10 @@ func runUpdate(settings []ZoneSettings) error {
 				}
 
 				if zone.AutoWWW {
-					err := updateDnsEntry(zone.ZoneID, zone.Token, DnsEntry{
+					err := updateDNSEntry(zone.ZoneID, zone.Token, DNSEntry{
 						Name:    "www." + domain,
-						Content: currentIp,
-						TTL:     zoneTtl,
+						Content: currentIP,
+						TTL:     zoneTTL,
 						Type:    "A",
 					})
 					if err != nil {
@@ -125,7 +126,7 @@ func runUpdate(settings []ZoneSettings) error {
 			}
 
 			if delete && domainDeletionAllowed(zone.AutoDelete, autoDeleteAllowList, autoDeleteBlockList, entry.Name) {
-				err := deleteDnsEntry(zone.ZoneID, zone.Token, entry)
+				err := deleteDNSEntry(zone.ZoneID, zone.Token, entry)
 				if err != nil {
 					return fmt.Errorf("error deleting entry: %w", err)
 				}
@@ -133,11 +134,11 @@ func runUpdate(settings []ZoneSettings) error {
 			}
 
 			// update out of sync entities
-			if entry.Content != currentIp || entry.TTL != zoneTtl {
-				entry.Content = currentIp
-				entry.TTL = zoneTtl
+			if entry.Content != currentIP || entry.TTL != zoneTTL {
+				entry.Content = currentIP
+				entry.TTL = zoneTTL
 
-				err := updateDnsEntry(zone.ZoneID, zone.Token, entry)
+				err := updateDNSEntry(zone.ZoneID, zone.Token, entry)
 				if err != nil {
 					return fmt.Errorf("error updating entry: %w", err)
 				}
@@ -158,13 +159,13 @@ func domainDeletionAllowed(autoDelete bool, autoDeleteAllowList []*regexp.Regexp
 	// - if there is no allow list, we CAN delete
 
 	if !autoDelete {
-		l.Info("not deleting domain because auto-delete is disabled", "domain", domain)
+		slog.Info("not deleting domain because auto-delete is disabled", "domain", domain)
 		return false
 	}
 
 	for _, pattern := range autoDeleteBlockList {
 		if pattern.MatchString(domain) {
-			l.Info("not deleting domain because it matches an entry on the auto-delete block list", "domain", domain)
+			slog.Info("not deleting domain because it matches an entry on the auto-delete block list", "domain", domain)
 			return false
 		}
 	}
@@ -175,7 +176,7 @@ func domainDeletionAllowed(autoDelete bool, autoDeleteAllowList []*regexp.Regexp
 				return true
 			}
 		}
-		l.Info("not deleting domain because it does not match any entry on the auto-delete allow list", "domain", domain)
+		slog.Info("not deleting domain because it does not match any entry on the auto-delete allow list", "domain", domain)
 		return false
 	} else {
 		return true

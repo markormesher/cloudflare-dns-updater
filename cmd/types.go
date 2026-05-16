@@ -11,7 +11,7 @@ type ZoneSettings struct {
 	Domains             []string `json:"domains"`
 }
 
-type DnsEntry struct {
+type DNSEntry struct {
 	ID      *string `json:"id"` // nil = create new
 	Name    string  `json:"name"`
 	Content string  `json:"content"`
@@ -19,8 +19,8 @@ type DnsEntry struct {
 	Type    string  `json:"type"`
 }
 
-type DnsQueryResponse struct {
-	Result     []DnsEntry `json:"result"`
+type DNSQueryResponse struct {
+	Result     []DNSEntry `json:"result"`
 	Success    bool       `json:"success"`
 	ResultInfo struct {
 		Page       int `json:"page"`
