@@ -14,6 +14,37 @@ var client = http.Client{
 	Timeout: 10 * time.Second,
 }
 
+func doWithRetries(req *http.Request) (*http.Response, error) {
+	attempt := 0
+	maxAttempts := 3
+
+	failDelay := time.Second * 5
+
+	for {
+		attempt++
+
+		if attempt != 1 {
+			time.Sleep(failDelay)
+		}
+
+		res, err := client.Do(req)
+		switch {
+		case err != nil:
+			slog.Error("error making request", "attempt", attempt, "error", err)
+
+		case res.StatusCode < 200 || res.StatusCode > 299:
+			slog.Error("non-OK response", "attempt", attempt, "status", res.Status)
+
+		default:
+			return res, nil
+		}
+
+		if attempt >= maxAttempts {
+			return nil, fmt.Errorf("aborting request, max retries exceeded")
+		}
+	}
+}
+
 const CloudflareAPIBase = "https://api.cloudflare.com/client/v4"
 
 func getIPAddress() (string, error) {
@@ -22,13 +53,9 @@ func getIPAddress() (string, error) {
 		return "", fmt.Errorf("error building request: %w", err)
 	}
 
-	res, err := client.Do(req)
+	res, err := doWithRetries(req)
 	if err != nil {
-		return "", fmt.Errorf("error making request: %w", err)
-	}
-
-	if res.StatusCode < 200 || res.StatusCode > 299 {
-		return "", fmt.Errorf("non-OK response: %v", res.Status)
+		return "", err
 	}
 
 	body, err := io.ReadAll(res.Body)
@@ -47,13 +74,9 @@ func getDNSEntries(zoneID string, token string) ([]DNSEntry, error) {
 
 	req.Header.Add("authorization", "Bearer "+token)
 
-	res, err := client.Do(req)
+	res, err := doWithRetries(req)
 	if err != nil {
-		return nil, fmt.Errorf("error making request: %w", err)
-	}
-
-	if res.StatusCode < 200 || res.StatusCode > 299 {
-		return nil, fmt.Errorf("non-OK response: %v", res.Status)
+		return nil, err
 	}
 
 	var output DNSQueryResponse
@@ -91,13 +114,9 @@ func updateDNSEntry(zoneID string, token string, entry DNSEntry) error {
 	req.Header.Add("authorization", "Bearer "+token)
 	req.Header.Add("content-type", "application/json")
 
-	res, err := client.Do(req)
+	_, err = doWithRetries(req)
 	if err != nil {
-		return fmt.Errorf("error making request: %w", err)
-	}
-
-	if res.StatusCode < 200 || res.StatusCode > 299 {
-		return fmt.Errorf("non-OK response: %v", res.Status)
+		return err
 	}
 
 	return nil
@@ -113,13 +132,9 @@ func deleteDNSEntry(zoneID string, token string, entry DNSEntry) error {
 
 	req.Header.Add("authorization", "Bearer "+token)
 
-	res, err := client.Do(req)
+	_, err = doWithRetries(req)
 	if err != nil {
-		return fmt.Errorf("error making request: %w", err)
-	}
-
-	if res.StatusCode < 200 || res.StatusCode > 299 {
-		return fmt.Errorf("non-OK response: %v", res.Status)
+		return err
 	}
 
 	return nil
