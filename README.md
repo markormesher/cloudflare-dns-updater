@@ -1,4 +1,3 @@
-![CircleCI](https://img.shields.io/circleci/build/github/markormesher/cloudflare-dns-updater)
 
 # Cloudflare DNS Updater
 
